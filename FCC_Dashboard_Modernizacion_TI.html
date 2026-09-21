@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FCC · Modernización de TI — Sistemas heredados</title>
+<style>
+  :root{
+    --ink:#14213D;
+    --ink-soft:#4A5875;
+    --paper:#F1F4F8;
+    --card:#FFFFFF;
+    --line:#DDE3ED;
+    --hist:#2C6E82;
+    --hist-fill:rgba(44,110,130,0.12);
+    --pred:#E3792A;
+    --pred-fill:rgba(227,121,42,0.14);
+    --pred-band:rgba(227,121,42,0.10);
+    --good:#2F7A4F;
+    --radius-card:10px;
+    --radius-chip:999px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:20px;
+    margin-bottom:26px;
+    flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+    padding-bottom:20px;
+  }
+  .title-block h1{
+    font-size:clamp(1.5rem,3vw,2.05rem);
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+    font-weight:700;
+  }
+  .title-block p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:0.95rem;
+    max-width:560px;
+  }
+  .case-tag{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+    font-size:0.82rem;
+    color:var(--ink-soft);
+  }
+  .case-tag strong{color:var(--ink); font-size:0.9rem;}
+  .phase-track{display:flex; gap:4px; margin-top:4px;}
+  .phase-dot{
+    width:26px;height:6px;border-radius:3px;background:var(--line);
+  }
+  .phase-dot.done{background:var(--hist);}
+  .phase-dot.current{background:var(--pred);}
+
+  /* ---------- KPI strip ---------- */
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+    margin-bottom:26px;
+  }
+  .kpi{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius-card);
+    padding:18px 18px 16px;
+  }
+  .kpi .label{
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  .kpi .value{
+    font-size:1.85rem;
+    font-weight:700;
+    letter-spacing:-0.02em;
+  }
+  .kpi .sub{
+    margin-top:6px;
+    font-size:0.8rem;
+    color:var(--ink-soft);
+  }
+  .kpi.pred .value{color:var(--pred);}
+  .kpi .delta{font-weight:600;}
+  .delta.down{color:var(--good);}
+
+  /* ---------- Panel / card shell ---------- */
+  .panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius-card);
+    padding:22px 22px 14px;
+    margin-bottom:20px;
+  }
+  .panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .panel-head h2{
+    font-size:1.05rem;
+    margin:0;
+    font-weight:700;
+  }
+  .panel-head .desc{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    margin:2px 0 0;
+  }
+
+  /* legend + toggle controls */
+  .controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .legend{display:flex; gap:16px; font-size:0.8rem; color:var(--ink-soft); align-items:center;}
+  .legend .key{display:flex; align-items:center; gap:6px;}
+  .swatch{width:14px;height:14px;border-radius:3px;display:inline-block;}
+  .swatch.hist{background:var(--hist);}
+  .swatch.pred{background:var(--pred);}
+  .swatch.band{background:var(--pred-band); border:1px dashed var(--pred);}
+
+  .toggle-btn{
+    border:1px solid var(--line);
+    background:var(--paper);
+    color:var(--ink);
+    font-size:0.78rem;
+    padding:7px 12px;
+    border-radius:var(--radius-chip);
+    cursor:pointer;
+    font-weight:600;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .toggle-btn[aria-pressed="true"]{
+    background:var(--ink);
+    color:#fff;
+    border-color:var(--ink);
+  }
+  .toggle-btn:focus-visible{outline:2px solid var(--pred); outline-offset:2px;}
+
+  .tabs{display:flex; gap:6px;}
+  .tab-btn{
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--ink-soft);
+    font-size:0.8rem;
+    padding:7px 14px;
+    border-radius:var(--radius-chip);
+    cursor:pointer;
+    font-weight:600;
+  }
+  .tab-btn.active{background:var(--hist); color:#fff; border-color:var(--hist);}
+  .tab-btn:focus-visible{outline:2px solid var(--pred); outline-offset:2px;}
+
+  /* ---------- Chart ---------- */
+  .chart-shell{position:relative; width:100%;}
+  svg#chart{width:100%; height:auto; display:block; overflow:visible;}
+  .grid-line{stroke:var(--line); stroke-width:1;}
+  .axis-label{fill:var(--ink-soft); font-size:11px; font-family:inherit;}
+  .divider{stroke:var(--ink-soft); stroke-width:1; stroke-dasharray:3 4;}
+  .divider-label{fill:var(--ink-soft); font-size:10.5px; font-weight:600;}
+
+  .pt{cursor:pointer;}
+  .pt:hover{stroke:var(--ink); stroke-width:2;}
+
+  #tooltip{
+    position:absolute;
+    pointer-events:none;
+    background:var(--ink);
+    color:#fff;
+    padding:8px 11px;
+    border-radius:8px;
+    font-size:0.78rem;
+    line-height:1.4;
+    transform:translate(-50%,-115%);
+    opacity:0;
+    transition:opacity .1s ease;
+    white-space:nowrap;
+    z-index:5;
+  }
+  #tooltip strong{display:block; font-size:0.83rem;}
+  #tooltip.show{opacity:1;}
+
+  /* ---------- Table ---------- */
+  .table-scroll{overflow-x:auto; margin-top:10px;}
+  table{width:100%; border-collapse:collapse; font-size:0.85rem; min-width:640px;}
+  thead th{
+    text-align:left;
+    font-size:0.72rem;
+    text-transform:none;
+    color:var(--ink-soft);
+    border-bottom:1px solid var(--line);
+    padding:9px 10px;
+    font-weight:600;
+  }
+  tbody td{
+    padding:9px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody tr.is-pred td{background:var(--pred-fill);}
+  .badge{
+    display:inline-block;
+    padding:2px 9px;
+    border-radius:var(--radius-chip);
+    font-size:0.72rem;
+    font-weight:700;
+  }
+  .badge.real{background:var(--hist-fill); color:var(--hist);}
+  .badge.pred{background:rgba(227,121,42,0.18); color:var(--pred);}
+
+  footer{
+    margin-top:20px;
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    border-top:1px solid var(--line);
+    padding-top:16px;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:900px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:640px){
+    .wrap{padding:18px 14px 40px;}
+    header{align-items:flex-start;}
+    .case-tag{align-items:flex-start;}
+    .kpi-grid{grid-template-columns:1fr 1fr; gap:10px;}
+    .kpi{padding:14px;}
+    .kpi .value{font-size:1.5rem;}
+    .panel{padding:16px 14px 10px;}
+    .legend{gap:10px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <h1>Modernización de TI — FCC</h1>
+      <p>Trayectoria del número de sistemas heredados: histórico 2013–2016 y predicción de Machine Learning para los tres trimestres siguientes.</p>
+    </div>
+    <div class="case-tag">
+      <span>Fase actual de migración</span>
+      <strong id="phaseNow">Optimization</strong>
+      <div class="phase-track" id="phaseTrack"></div>
+    </div>
+  </header>
+
+  <section class="kpi-grid" id="kpiGrid"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2 id="chartTitle">Sistemas heredados por trimestre</h2>
+        <p class="desc" id="chartDesc">Serie histórica (real) y proyección del modelo (Random Walk con drift), con banda de incertidumbre ±1 desviación estándar.</p>
+      </div>
+      <div class="controls">
+        <div class="tabs" role="tablist" aria-label="Métrica del gráfico">
+          <button class="tab-btn active" id="tabSistemas" role="tab" aria-selected="true">Sistemas heredados</button>
+          <button class="tab-btn" id="tabBudget" role="tab" aria-selected="false">Presupuesto O&amp;M (%)</button>
+        </div>
+        <button class="toggle-btn" id="toggleBand" aria-pressed="true">Banda de incertidumbre</button>
+      </div>
+    </div>
+    <div class="legend" id="legend">
+      <span class="key"><span class="swatch hist"></span>Datos históricos (real)</span>
+      <span class="key"><span class="swatch pred"></span>Predicción (Machine Learning)</span>
+      <span class="key"><span class="swatch band"></span>Intervalo de incertidumbre</span>
+    </div>
+    <div class="chart-shell">
+      <svg id="chart" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Gráfico de línea del número de sistemas heredados por trimestre"></svg>
+      <div id="tooltip" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Detalle por trimestre</h2>
+        <p class="desc">Las filas resaltadas en naranja corresponden a los tres periodos predichos por el modelo.</p>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Periodo</th>
+            <th>Tipo</th>
+            <th>N° sistemas heredados</th>
+            <th>Presupuesto O&amp;M (%)</th>
+            <th>Fase de migración</th>
+            <th>Intervalo (predicción)</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Fuente: Desouza, Denford &amp; Krishnamurthy (2019), «Cómo la FCC gestionó su modernización de TI» + dataset simulado del caso. Modelo: Random Walk con drift, ancla en el último valor observado (2016-Q1) y tasa de cambio histórica promedio (-8.07 sistemas/trimestre). Dashboard autocontenido — no requiere conexión a internet.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Datos ---------------- */
+  var quarters = ['2013-Q3','2013-Q4','2014-Q1','2014-Q2','2014-Q3','2014-Q4','2015-Q1','2015-Q2','2015-Q3','2015-Q4','2016-Q1','2016-Q2','2016-Q3','2016-Q4'];
+  var systems  = [170.3,170.9,159.5,160.7,141.2,143.5,141.3,146.1,149.0,146.8,89.6,81.5,73.5,65.4];
+  var budget   = [84.3,85.5,80.2,79.1,63.6,64.6,66.2,63.5,48.5,50.2,45.2,41.3,40.0,40.0];
+  var phase    = ['inventory','inventory','consolidation','consolidation','migration','migration','migration','migration','migration','migration','optimization','optimization','optimization','optimization'];
+  var isPred   = [false,false,false,false,false,false,false,false,false,false,false,true,true,true];
+  var lower    = [null,null,null,null,null,null,null,null,null,null,null,68.1,60.1,52.0];
+  var upper    = [null,null,null,null,null,null,null,null,null,null,null,94.9,86.9,78.8];
+
+  var N_HIST = 11; // índices 0..10 son reales; 11,12,13 son predicción
+  var phaseLabels = {inventory:'Inventory', consolidation:'Consolidation', migration:'Migration', optimization:'Optimization'};
+  var phaseOrder = ['inventory','consolidation','migration','optimization'];
+
+  /* ---------------- Fase actual (track) ---------------- */
+  var phaseTrack = document.getElementById('phaseTrack');
+  var currentPhase = phase[N_HIST-1];
+  phaseOrder.forEach(function(p){
+    var span = document.createElement('span');
+    span.className = 'phase-dot' + (phaseOrder.indexOf(p) <= phaseOrder.indexOf(currentPhase) ? ' done' : '');
+    if(p === currentPhase) span.className += ' current';
+    phaseTrack.appendChild(span);
+  });
+  document.getElementById('phaseNow').textContent = phaseLabels[currentPhase];
+
+  /* ---------------- KPIs ---------------- */
+  var last = systems[N_HIST-1];
+  var first = systems[0];
+  var totalReducPct = ((first-last)/first*100).toFixed(1);
+  var nextPred = systems[N_HIST];
+  var deltaNext = (nextPred-last).toFixed(1);
+  var finalPred = systems[systems.length-1];
+  var totalReducProjPct = ((first-finalPred)/first*100).toFixed(1);
+
+  var kpis = [
+    {label:'Último valor real (2016-Q1)', value: last.toFixed(1), sub:'Sistemas heredados activos', cls:''},
+    {label:'Reducción acumulada (real)', value: totalReducPct+'%', sub:'Desde 2013-Q3 ('+first.toFixed(0)+' → '+last.toFixed(0)+')', cls:''},
+    {label:'Predicción próximo trimestre', value: nextPred.toFixed(1), sub:'2016-Q2 · '+(deltaNext<0?'':'+')+deltaNext+' vs. último real', cls:'pred'},
+    {label:'Proyección a 2016-Q4', value: finalPred.toFixed(1), sub:'Reducción total proyectada: '+totalReducProjPct+'%', cls:'pred'}
+  ];
+  var kpiGrid = document.getElementById('kpiGrid');
+  kpis.forEach(function(k){
+    var div = document.createElement('div');
+    div.className = 'kpi ' + k.cls;
+    div.innerHTML = '<div class="label">'+k.label+'</div><div class="value">'+k.value+'</div><div class="sub">'+k.sub+'</div>';
+    kpiGrid.appendChild(div);
+  });
+
+  /* ---------------- Tabla ---------------- */
+  var tbody = document.getElementById('tableBody');
+  quarters.forEach(function(q, i){
+    var tr = document.createElement('tr');
+    if(isPred[i]) tr.className = 'is-pred';
+    var interval = isPred[i] ? (lower[i].toFixed(1)+' – '+upper[i].toFixed(1)) : '—';
+    tr.innerHTML =
+      '<td>'+q+'</td>'+
+      '<td><span class="badge '+(isPred[i]?'pred':'real')+'">'+(isPred[i]?'Predicción':'Real')+'</span></td>'+
+      '<td>'+systems[i].toFixed(1)+'</td>'+
+      '<td>'+budget[i].toFixed(1)+'%</td>'+
+      '<td>'+phaseLabels[phase[i]]+'</td>'+
+      '<td>'+interval+'</td>';
+    tbody.appendChild(tr);
+  });
+
+  /* ---------------- Chart (SVG, dibujado a mano) ---------------- */
+  var svg = document.getElementById('chart');
+  var tooltip = document.getElementById('tooltip');
+  var W = 1000, H = 420;
+  var M = {top:24, right:26, bottom:42, left:52};
+  var showBand = true;
+  var currentMetric = 'systems'; // 'systems' | 'budget'
+
+  var svgns = "http://www.w3.org/2000/svg";
+  function el(tag, attrs){
+    var e = document.createElementNS(svgns, tag);
+    for(var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function getSeries(){
+    return currentMetric === 'systems' ? systems : budget;
+  }
+
+  function render(){
+    svg.innerHTML = '';
+    var series = getSeries();
+    var maxV = Math.max.apply(null, series.concat(currentMetric==='systems'?upper.filter(function(v){return v!==null;}):[])) * 1.08;
+    var minV = 0;
+    var innerW = W - M.left - M.right;
+    var innerH = H - M.top - M.bottom;
+
+    function x(i){ return M.left + (i/(quarters.length-1)) * innerW; }
+    function y(v){ return M.top + innerH - ((v-minV)/(maxV-minV)) * innerH; }
+
+    /* gridlines + eje Y */
+    var steps = 5;
+    for(var s=0;s<=steps;s++){
+      var v = minV + (maxV-minV)*s/steps;
+      var yy = y(v);
+      svg.appendChild(el('line',{x1:M.left, x2:W-M.right, y1:yy, y2:yy, class:'grid-line'}));
+      var lbl = el('text',{x:M.left-8, y:yy+4, class:'axis-label', 'text-anchor':'end'});
+      lbl.textContent = Math.round(v) + (currentMetric==='budget' ? '%' : '');
+      svg.appendChild(lbl);
+    }
+
+    /* eje X */
+    quarters.forEach(function(q,i){
+      if(i % 2 === 0 || quarters.length <= 8){
+        var lbl = el('text',{x:x(i), y:H-M.bottom+22, class:'axis-label', 'text-anchor':'middle'});
+        lbl.textContent = q;
+        svg.appendChild(lbl);
+      }
+    });
+
+    /* divisor histórico / predicción */
+    var divX = (x(N_HIST-1)+x(N_HIST))/2;
+    svg.appendChild(el('line',{x1:divX, x2:divX, y1:M.top, y2:H-M.bottom, class:'divider'}));
+    var divLbl = el('text',{x:divX+6, y:M.top+12, class:'divider-label'});
+    divLbl.textContent = 'Inicio de predicción';
+    svg.appendChild(divLbl);
+
+    /* banda de incertidumbre (solo systems) */
+    if(currentMetric==='systems' && showBand){
+      var bandPts = [];
+      for(var i=N_HIST-1;i<quarters.length;i++){
+        var lo = i===N_HIST-1 ? last : lower[i];
+        bandPts.push(x(i)+','+y(lo));
+      }
+      for(var i2=quarters.length-1;i2>=N_HIST-1;i2--){
+        var hi = i2===N_HIST-1 ? last : upper[i2];
+        bandPts.push(x(i2)+','+y(hi));
+      }
+      svg.appendChild(el('polygon',{points:bandPts.join(' '), fill:'var(--pred-band)', stroke:'none'}));
+    }
+
+    /* línea histórica */
+    var histPts = [];
+    for(var i3=0;i3<N_HIST;i3++) histPts.push(x(i3)+','+y(series[i3]));
+    var histPath = el('polyline',{points:histPts.join(' '), fill:'none', stroke:'var(--hist)', 'stroke-width':2.5, 'stroke-linejoin':'round', 'stroke-linecap':'round'});
+    svg.appendChild(histPath);
+
+    /* área bajo la histórica (sutil) */
+    var areaPts = histPts.slice();
+    areaPts.push(x(N_HIST-1)+','+y(minV));
+    areaPts.push(x(0)+','+y(minV));
+    svg.appendChild(el('polygon',{points:areaPts.join(' '), fill:'var(--hist-fill)', stroke:'none'}));
+
+    /* línea de predicción (discontinua, desde el último punto real) */
+    var predPts = [];
+    for(var i4=N_HIST-1;i4<quarters.length;i4++) predPts.push(x(i4)+','+y(series[i4]));
+    var predPath = el('polyline',{points:predPts.join(' '), fill:'none', stroke:'var(--pred)', 'stroke-width':2.5, 'stroke-dasharray':'6 5', 'stroke-linejoin':'round', 'stroke-linecap':'round'});
+    svg.appendChild(predPath);
+
+    /* puntos */
+    quarters.forEach(function(q,i){
+      var pred = i >= N_HIST-1 ? isPred[i] : false;
+      var color = (i>=N_HIST) ? 'var(--pred)' : 'var(--hist)';
+      var r = 5;
+      var c = el('circle',{cx:x(i), cy:y(series[i]), r:r, fill:color, stroke:'#fff', 'stroke-width':2, class:'pt'});
+      c.addEventListener('mousemove', function(evt, idx){
+        return function(evt){ showTip(evt, idx); };
+      }(null, i));
+      c.addEventListener('mouseleave', hideTip);
+      c.addEventListener('touchstart', function(idx){
+        return function(evt){ showTip(evt.touches[0], idx); };
+      }(i), {passive:true});
+      svg.appendChild(c);
+    });
+  }
+
+  function showTip(evt, i){
+    var rect = svg.getBoundingClientRect();
+    var xPix = (evt.clientX - rect.left);
+    var yPix = (evt.clientY - rect.top);
+    var series = getSeries();
+    var label = quarters[i];
+    var val = series[i].toFixed(1) + (currentMetric==='budget' ? '%' : ' sistemas');
+    var tag = isPred[i] ? 'Predicción (ML)' : 'Dato real';
+    var extra = '';
+    if(isPred[i] && currentMetric==='systems'){
+      extra = '<br>Intervalo: '+lower[i].toFixed(1)+' – '+upper[i].toFixed(1);
+    }
+    tooltip.innerHTML = '<strong>'+label+' · '+tag+'</strong>'+val+extra;
+    tooltip.style.left = xPix+'px';
+    tooltip.style.top = yPix+'px';
+    tooltip.classList.add('show');
+  }
+  function hideTip(){ tooltip.classList.remove('show'); }
+
+  /* ---------------- Interacciones ---------------- */
+  document.getElementById('toggleBand').addEventListener('click', function(){
+    showBand = !showBand;
+    this.setAttribute('aria-pressed', showBand);
+    render();
+  });
+
+  var tabSistemas = document.getElementById('tabSistemas');
+  var tabBudget = document.getElementById('tabBudget');
+  var chartTitle = document.getElementById('chartTitle');
+  var chartDesc = document.getElementById('chartDesc');
+  var legendBand = document.querySelector('.legend .key:nth-child(3)');
+
+  function setMetric(metric){
+    currentMetric = metric;
+    var isSys = metric === 'systems';
+    tabSistemas.classList.toggle('active', isSys);
+    tabSistemas.setAttribute('aria-selected', isSys);
+    tabBudget.classList.toggle('active', !isSys);
+    tabBudget.setAttribute('aria-selected', !isSys);
+    chartTitle.textContent = isSys ? 'Sistemas heredados por trimestre' : 'Presupuesto de O&M en TI por trimestre (%)';
+    chartDesc.textContent = isSys
+      ? 'Serie histórica (real) y proyección del modelo (Random Walk con drift), con banda de incertidumbre ±1 desviación estándar.'
+      : 'Porcentaje del presupuesto de TI destinado a operación y mantenimiento, proyectado en la misma tendencia declinante.';
+    legendBand.style.display = isSys ? 'flex' : 'none';
+    render();
+  }
+  tabSistemas.addEventListener('click', function(){ setMetric('systems'); });
+  tabBudget.addEventListener('click', function(){ setMetric('budget'); });
+
+  window.addEventListener('resize', render);
+  render();
+
+})();
+</script>
+</body>
+</html>
